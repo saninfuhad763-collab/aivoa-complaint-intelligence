@@ -1,5 +1,7 @@
 from typing import Dict, Any, List
 from app.ai.state import ComplaintState
+from app.core.config import settings
+from app.ai.groq_service import extract_complaint_with_groq
 
 # List of key complaint fields used for completeness validation
 CORE_COMPLAINT_FIELDS = [
@@ -35,13 +37,45 @@ def normalize_input(state: ComplaintState) -> Dict[str, Any]:
 
 def extract_complaint(state: ComplaintState) -> Dict[str, Any]:
     """
-    Step 2: Establish the structured extraction contract.
-    For foundation phase: Deterministic placeholder logic (no LLM/Groq call).
+    Step 2: Structured complaint extraction.
+    Uses Groq / gemma2-9b-it model if GROQ_API_KEY is configured,
+    otherwise falls back cleanly to deterministic extraction placeholder.
     """
-    input_text = state.get("input_text", "")
+    input_text = state.get("input_text", "") or ""
+    source_type = state.get("source_type", "text") or "text"
     existing_data = state.get("complaint_data") or {}
 
-    # Simple deterministic fallback extraction contract placeholder
+    # If GROQ_API_KEY is configured and we have input text, run real Groq extraction
+    if settings.GROQ_API_KEY and input_text:
+        ai_res = extract_complaint_with_groq(input_text=input_text, source_type=source_type)
+        extracted = ai_res.get("extracted_data", {})
+
+        # Merge with existing data if pre-filled fields exist
+        merged_data = {
+            "complaint_number": existing_data.get("complaint_number") or extracted.get("complaint_number", ""),
+            "complaint_source": existing_data.get("complaint_source") or extracted.get("complaint_source") or source_type,
+            "customer_name": existing_data.get("customer_name") or extracted.get("customer_name"),
+            "product_name": existing_data.get("product_name") or extracted.get("product_name"),
+            "product_strength": existing_data.get("product_strength") or extracted.get("product_strength"),
+            "batch_number": existing_data.get("batch_number") or extracted.get("batch_number"),
+            "manufacturing_date": existing_data.get("manufacturing_date") or extracted.get("manufacturing_date"),
+            "expiry_date": existing_data.get("expiry_date") or extracted.get("expiry_date"),
+            "affected_quantity": existing_data.get("affected_quantity") if existing_data.get("affected_quantity") is not None else extracted.get("affected_quantity"),
+            "affected_quantity_unit": existing_data.get("affected_quantity_unit") or extracted.get("affected_quantity_unit"),
+            "complaint_type": existing_data.get("complaint_type") or extracted.get("complaint_type"),
+            "complaint_date": existing_data.get("complaint_date") or extracted.get("complaint_date"),
+            "complaint_description": existing_data.get("complaint_description") or extracted.get("complaint_description") or input_text,
+            "status": existing_data.get("status", "NEW"),
+        }
+
+        res_update: Dict[str, Any] = {"complaint_data": merged_data}
+        if "confidence" in ai_res:
+            res_update["confidence"] = ai_res["confidence"]
+        if ai_res.get("error"):
+            res_update["validation_errors"] = [ai_res["error"]]
+        return res_update
+
+    # Fallback deterministic extraction contract placeholder (when no GROQ_API_KEY)
     extracted = {
         "complaint_number": existing_data.get("complaint_number", ""),
         "complaint_source": state.get("source_type", "text"),
@@ -68,15 +102,16 @@ def validate_complaint(state: ComplaintState) -> Dict[str, Any]:
     and accumulate validation warnings/errors without inventing data.
     """
     complaint_data = state.get("complaint_data", {}) or {}
-    missing_fields: List[str] = []
-    validation_errors: List[str] = []
+    missing_fields: List[str] = list(state.get("missing_fields", []) or [])
+    validation_errors: List[str] = list(state.get("validation_errors", []) or [])
 
     for field in CORE_COMPLAINT_FIELDS:
         val = complaint_data.get(field)
         if val is None or (isinstance(val, str) and not val.strip()):
-            missing_fields.append(field)
+            if field not in missing_fields:
+                missing_fields.append(field)
 
-    if missing_fields:
+    if missing_fields and not any("Missing required complaint details" in e for e in validation_errors):
         validation_errors.append(
             f"Missing required complaint details: {', '.join(missing_fields)}"
         )
@@ -110,19 +145,18 @@ def assess_risk(state: ComplaintState) -> Dict[str, Any]:
     Step 5: Perform AI risk assessment.
     Deterministic baseline logic for foundation phase.
     """
-    validation_errors = state.get("validation_errors", [])
     missing_fields = state.get("missing_fields", [])
 
     if len(missing_fields) >= 3:
         severity = "Medium"
         risk_level = "Minor"
         assessment = "Preliminary intake: Multiple fields missing. Further investigation required."
-        confidence = 0.5
+        confidence = state.get("confidence") or 0.5
     else:
         severity = "Low"
         risk_level = "Minor"
         assessment = "Standard complaint intake processed."
-        confidence = 0.8
+        confidence = state.get("confidence") or 0.8
 
     return {
         "severity": severity,
@@ -137,7 +171,7 @@ def recommend_action(state: ComplaintState) -> Dict[str, Any]:
     Step 6: Recommend next QA workflow action based on risk assessment.
     """
     severity = state.get("severity", "Low")
-    
+
     if severity in ("High", "Critical"):
         action = "Initiate immediate QA investigation, log CAPA workflow, and notify Quality Manager."
     else:
@@ -153,7 +187,7 @@ def finalize_result(state: ComplaintState) -> Dict[str, Any]:
     Step 7: Finalize state into clean structured format ready for API consumption.
     """
     complaint_data = dict(state.get("complaint_data", {}))
-    
+
     # Enrich complaint_data with assessed risk fields if not present
     complaint_data["severity"] = complaint_data.get("severity") or state.get("severity")
     complaint_data["risk_level"] = complaint_data.get("risk_level") or state.get("risk_level")

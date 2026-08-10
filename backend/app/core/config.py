@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/aivoa_complaints"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "gemma2-9b-it"
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     
     CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
