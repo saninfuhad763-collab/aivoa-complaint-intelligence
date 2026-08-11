@@ -1022,10 +1022,26 @@
   color: var(--danger);
 }
 
-.saved-complaint-details {
-  font-size: 11px;
+.saved-complaint-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-item-delete {
+  background: none;
+  border: none;
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition), background var(--transition);
+}
+
+.btn-item-delete:hover {
+  color: var(--danger);
+  background: var(--danger-muted);
 }

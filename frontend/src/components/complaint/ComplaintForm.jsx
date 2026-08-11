@@ -124,6 +124,9 @@ export default function ComplaintForm() {
           missingFields: [],
         }));
       }
+    } else {
+      setForm(INITIAL_FORM);
+      setFieldErrors({});
     }
   }, [selectedComplaint, dispatch]);
 
