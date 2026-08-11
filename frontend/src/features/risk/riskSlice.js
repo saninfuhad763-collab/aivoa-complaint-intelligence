@@ -38,6 +38,15 @@ const riskSlice = createSlice({
       }
     },
     clearRiskAssessment: () => initialState,
+    /**
+     * patchMissingFields — update only the missingFields list in risk state.
+     * Called by the Copilot follow-up handler after a field correction so that
+     * ComplaintnessChecker badge reflects the updated readiness.
+     * action.payload: string[] — the updated missing_fields list.
+     */
+    patchMissingFields: (state, action) => {
+      state.missingFields = action.payload || [];
+    },
   },
   extraReducers: (builder) => {
     const updateRiskState = (state, action) => {
@@ -60,6 +69,7 @@ export const {
   setRiskAssessment,
   updateRiskField,
   clearRiskAssessment,
+  patchMissingFields,
 } = riskSlice.actions;
 
 export default riskSlice.reducer;

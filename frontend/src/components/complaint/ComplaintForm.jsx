@@ -6,8 +6,10 @@ import {
   updateExistingComplaint,
   clearSelectedComplaint,
   clearAnalysisResult,
+  patchAnalysisResult,
+  seedAnalysisResult,
 } from '../../features/complaints/complaintSlice.js';
-import { setRiskAssessment, clearRiskAssessment } from '../../features/risk/riskSlice.js';
+import { setRiskAssessment, clearRiskAssessment, patchMissingFields } from '../../features/risk/riskSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 import RiskAssessment from './RiskAssessment.jsx';
 import ComplaintnessChecker from './ComplaintnessChecker.jsx';
@@ -29,6 +31,14 @@ const INITIAL_FORM = {
   complaint_description: '',
   status: 'NEW',
 };
+
+const CORE_COMPLAINT_FIELDS = [
+  'customer_name',
+  'product_name',
+  'batch_number',
+  'complaint_type',
+  'complaint_description',
+];
 
 const COMPLAINT_TYPES = [
   '', 'Quality Defect', 'Packaging Defect', 'Mislabeling',
@@ -86,6 +96,8 @@ const formatDateValue = (val) => {
 export default function ComplaintForm() {
   const dispatch = useDispatch();
   const { loading, error, analysisResult, selectedComplaint } = useSelector((s) => s.complaints);
+  // Fix A: read current risk state so it can be included in the save payload
+  const riskState = useSelector((s) => s.risk);
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
@@ -98,7 +110,7 @@ export default function ComplaintForm() {
   // When a saved complaint is selected, populate form fields and risk assessment
   useEffect(() => {
     if (selectedComplaint) {
-      setForm({
+      const savedForm = {
         complaint_number: selectedComplaint.complaint_number || '',
         complaint_source: selectedComplaint.complaint_source || '',
         customer_name: selectedComplaint.customer_name || '',
@@ -113,18 +125,41 @@ export default function ComplaintForm() {
         complaint_date: formatDateValue(selectedComplaint.complaint_date),
         complaint_description: selectedComplaint.complaint_description || '',
         status: selectedComplaint.status || 'NEW',
-      });
+      };
+      setForm(savedForm);
 
-      if (selectedComplaint.severity || selectedComplaint.risk_level || selectedComplaint.initial_risk_assessment) {
-        dispatch(setRiskAssessment({
-          severity: selectedComplaint.severity,
-          riskLevel: selectedComplaint.risk_level,
-          initialAssessment: selectedComplaint.initial_risk_assessment,
-          suggestedAction: selectedComplaint.suggested_next_action,
-          confidence: selectedComplaint.ai_confidence,
-          missingFields: [],
-        }));
-      }
+      // Fix B: always hydrate riskSlice from persisted AI fields (including null to clear)
+      dispatch(setRiskAssessment({
+        severity: selectedComplaint.severity ?? null,
+        riskLevel: selectedComplaint.risk_level ?? null,
+        initialAssessment: selectedComplaint.initial_risk_assessment ?? null,
+        suggestedAction: selectedComplaint.suggested_next_action ?? null,
+        confidence: selectedComplaint.ai_confidence ?? null,
+        missingFields: [],
+      }));
+
+      // Fix C: seed analysisResult from the saved complaint so ComplaintnessChecker
+      // can render and compute readiness without any AI/LLM call.
+      // seedAnalysisResult always writes (unlike patchAnalysisResult which is a
+      // no-op when analysisResult is null — i.e. after a page refresh).
+      dispatch(seedAnalysisResult({
+        complaint_data: {
+          customer_name: selectedComplaint.customer_name || null,
+          product_name: selectedComplaint.product_name || null,
+          batch_number: selectedComplaint.batch_number || null,
+          complaint_type: selectedComplaint.complaint_type || null,
+          complaint_description: selectedComplaint.complaint_description || null,
+          product_strength: selectedComplaint.product_strength || null,
+          affected_quantity: selectedComplaint.affected_quantity != null ? String(selectedComplaint.affected_quantity) : null,
+          manufacturing_date: formatDateValue(selectedComplaint.manufacturing_date) || null,
+          expiry_date: formatDateValue(selectedComplaint.expiry_date) || null,
+        },
+      }));
+      const restoredMissing = CORE_COMPLAINT_FIELDS.filter((f) => {
+        const val = savedForm[f];
+        return val === null || val === undefined || !String(val).trim();
+      });
+      dispatch(patchMissingFields(restoredMissing));
     } else {
       setForm(INITIAL_FORM);
       setFieldErrors({});
@@ -155,7 +190,21 @@ export default function ComplaintForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      if (analysisResult) {
+        dispatch(patchAnalysisResult({ fields: { [name]: value } }));
+        const updatedMissing = CORE_COMPLAINT_FIELDS.filter((f) => {
+          const val = updated[f];
+          return val === null || val === undefined || !String(val).trim();
+        });
+        dispatch(patchMissingFields(updatedMissing));
+      }
+
+      return updated;
+    });
+
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -182,6 +231,13 @@ export default function ComplaintForm() {
     if (payload.affected_quantity !== null) {
       payload.affected_quantity = Number(payload.affected_quantity);
     }
+    // Fix A: include persisted AI risk fields from Redux riskState so
+    // they are written to PostgreSQL alongside the complaint form data.
+    payload.severity = riskState.severity ?? null;
+    payload.risk_level = riskState.riskLevel ?? null;
+    payload.initial_risk_assessment = riskState.initialAssessment ?? null;
+    payload.suggested_next_action = riskState.suggestedAction ?? null;
+    payload.ai_confidence = riskState.confidence ?? null;
     return payload;
   };
 

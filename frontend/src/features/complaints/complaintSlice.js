@@ -127,6 +127,84 @@ const complaintSlice = createSlice({
       state.error = null;
       state.analysisError = null;
     },
+    /**
+     * patchAnalysisResult — merge targeted field corrections into the existing
+     * analysisResult without running a full re-analysis.
+     *
+     * action.payload: { fields: { fieldName: value, ... } }
+     *
+     * Used by the Copilot follow-up handler to update individual fields
+     * (e.g. batch_number, affected_quantity) while preserving all other
+     * existing analysisResult state (risk assessment, confidence, etc.).
+     *
+     * CORE_COMPLAINT_FIELDS (backend): customer_name, product_name,
+     * batch_number, complaint_type, complaint_description.
+     * missing_fields is recomputed here so ComplaintnessChecker stays
+     * accurate after a correction.
+     */
+    patchAnalysisResult: (state, action) => {
+      if (!state.analysisResult) return;
+      const CORE_FIELDS = [
+        'customer_name',
+        'product_name',
+        'batch_number',
+        'complaint_type',
+        'complaint_description',
+      ];
+      const fields = action.payload?.fields || {};
+      // Merge the corrected fields into the existing complaint_data
+      state.analysisResult = {
+        ...state.analysisResult,
+        complaint_data: {
+          ...(state.analysisResult.complaint_data || {}),
+          ...fields,
+        },
+      };
+      // Recompute missing_fields for the 5 core required fields
+      const data = state.analysisResult.complaint_data;
+      state.analysisResult.missing_fields = CORE_FIELDS.filter((f) => {
+        const val = data[f];
+        return val === null || val === undefined || val === '';
+      });
+    },
+    /**
+     * seedAnalysisResult — initialize a minimal analysisResult from a saved
+     * complaint record when reopening, so ComplaintnessChecker can render
+     * without any AI/LLM call.
+     *
+     * Unlike patchAnalysisResult, this always writes — even when analysisResult
+     * is currently null (i.e. after a page refresh / new session).
+     *
+     * action.payload: { complaint_data: { ...fields } }
+     */
+    seedAnalysisResult: (state, action) => {
+      const complaint_data = action.payload?.complaint_data || {};
+      const CORE_FIELDS = [
+        'customer_name',
+        'product_name',
+        'batch_number',
+        'complaint_type',
+        'complaint_description',
+      ];
+      const missing_fields = CORE_FIELDS.filter((f) => {
+        const val = complaint_data[f];
+        return val === null || val === undefined || val === '';
+      });
+      state.analysisResult = {
+        complaint_data,
+        missing_fields,
+        validation_errors: [],
+        // Preserve any other fields as empty — this is a restore, not a fresh analysis
+        complaint_category: null,
+        severity: null,
+        risk_level: null,
+        initial_risk_assessment: null,
+        suggested_next_action: null,
+        confidence: null,
+        messages: [],
+        document_metadata: null,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -245,6 +323,8 @@ export const {
   clearSelectedComplaint,
   clearAnalysisResult,
   clearError,
+  patchAnalysisResult,
+  seedAnalysisResult,
 } = complaintSlice.actions;
 
 export default complaintSlice.reducer;
