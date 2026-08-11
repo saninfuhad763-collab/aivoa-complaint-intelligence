@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.api.health import router as health_router
 from app.api.analysis import router as analysis_router
 from app.api.complaints import router as complaints_router
+from app.api.documents import router as documents_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -22,6 +23,7 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(health_router, prefix=settings.API_V1_STR, tags=["Health"])
+app.include_router(documents_router, prefix=settings.API_V1_STR)
 # Analysis router must be registered before complaints router so that
 # /api/complaints/analyze is matched before /api/complaints/{complaint_id}.
 app.include_router(analysis_router, prefix=settings.API_V1_STR)
