@@ -17,13 +17,17 @@ const BotIcon = () => (
 
 export default function MessageList() {
   const messages = useSelector((s) => s.copilot.messages);
+  const copilotLoading = useSelector((s) => s.copilot.loading);
+  const analysisLoading = useSelector((s) => s.complaints.analysisLoading);
+  const isProcessing = copilotLoading || analysisLoading;
+
   const bottomRef = React.useRef(null);
 
   React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isProcessing]);
 
-  if (messages.length === 0) {
+  if (messages.length === 0 && !isProcessing) {
     return (
       <div className="message-empty" role="status">
         <div className="message-empty-icon">
@@ -33,9 +37,6 @@ export default function MessageList() {
         <div className="message-empty-sub">
           Paste complaint text or upload a PDF, then click{' '}
           <strong>Analyze Complaint</strong> to begin AI-assisted extraction.
-        </div>
-        <div className="ai-pending-note" style={{ marginTop: 8 }}>
-          AI integration in next phase
         </div>
       </div>
     );
@@ -61,6 +62,18 @@ export default function MessageList() {
           </div>
         </div>
       ))}
+      {isProcessing && (
+        <div className="message message-assistant" role="article" aria-label="Copilot processing message">
+          <div className="message-bubble" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="btn-spinner" aria-hidden="true" style={{ width: 14, height: 14, borderWidth: 2 }} />
+            <span>Analyzing complaint with AI Copilot…</span>
+          </div>
+          <div className="message-meta">
+            <span className="message-role">Copilot</span>
+            <span>Processing</span>
+          </div>
+        </div>
+      )}
       <div ref={bottomRef} aria-hidden="true" />
     </div>
   );

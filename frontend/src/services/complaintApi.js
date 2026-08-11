@@ -49,6 +49,16 @@ export const complaintApi = {
     const response = await apiClient.delete(`/api/complaints/${id}`);
     return response.data;
   },
+
+  /**
+   * Perform AI analysis on raw complaint input.
+   * POST /api/complaints/analyze
+   * @param {Object} data - { input_text, source_type }
+   */
+  analyzeComplaint: async (data) => {
+    const response = await apiClient.post('/api/complaints/analyze', data);
+    return response.data;
+  },
 };
 
 export default complaintApi;

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createNewComplaint } from '../../features/complaints/complaintSlice.js';
+import { createNewComplaint, clearAnalysisResult } from '../../features/complaints/complaintSlice.js';
+import { clearRiskAssessment } from '../../features/risk/riskSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 import RiskAssessment from './RiskAssessment.jsx';
 
@@ -52,10 +53,30 @@ const STATUS_OPTIONS = [
 
 export default function ComplaintForm() {
   const dispatch = useDispatch();
-  const { loading, error } = useSelector((s) => s.complaints);
+  const { loading, error, analysisResult } = useSelector((s) => s.complaints);
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  useEffect(() => {
+    if (analysisResult?.complaint_data) {
+      const data = analysisResult.complaint_data;
+      setForm((prevForm) => {
+        const updated = { ...prevForm };
+        Object.keys(data).forEach((key) => {
+          if (key in updated && data[key] !== null && data[key] !== undefined && data[key] !== '') {
+            updated[key] = String(data[key]);
+          }
+        });
+        if (!updated.complaint_number || !updated.complaint_number.trim()) {
+          const year = new Date().getFullYear();
+          const rand = Math.floor(100 + Math.random() * 900);
+          updated.complaint_number = `COMP-${year}-${rand}`;
+        }
+        return updated;
+      });
+    }
+  }, [analysisResult]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -117,6 +138,8 @@ export default function ComplaintForm() {
   const handleReset = () => {
     setForm(INITIAL_FORM);
     setFieldErrors({});
+    dispatch(clearAnalysisResult());
+    dispatch(clearRiskAssessment());
   };
 
   return (

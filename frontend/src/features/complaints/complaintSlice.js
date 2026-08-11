@@ -59,11 +59,25 @@ export const removeComplaint = createAsyncThunk(
   }
 );
 
+export const analyzeComplaint = createAsyncThunk(
+  'complaints/analyzeComplaint',
+  async (data, { rejectWithValue }) => {
+    try {
+      return await complaintApi.analyzeComplaint(data);
+    } catch (err) {
+      return rejectWithValue(extractErrorMessage(err));
+    }
+  }
+);
+
 const initialState = {
   complaints: [],
   selectedComplaint: null,
   loading: false,
   error: null,
+  analysisResult: null,
+  analysisLoading: false,
+  analysisError: null,
   pagination: {
     page: 1,
     pageSize: 20,
@@ -94,8 +108,13 @@ const complaintSlice = createSlice({
     clearSelectedComplaint: (state) => {
       state.selectedComplaint = null;
     },
+    clearAnalysisResult: (state) => {
+      state.analysisResult = null;
+      state.analysisError = null;
+    },
     clearError: (state) => {
       state.error = null;
+      state.analysisError = null;
     },
   },
   extraReducers: (builder) => {
@@ -178,6 +197,19 @@ const complaintSlice = createSlice({
       .addCase(removeComplaint.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // analyzeComplaint
+      .addCase(analyzeComplaint.pending, (state) => {
+        state.analysisLoading = true;
+        state.analysisError = null;
+      })
+      .addCase(analyzeComplaint.fulfilled, (state, action) => {
+        state.analysisLoading = false;
+        state.analysisResult = action.payload;
+      })
+      .addCase(analyzeComplaint.rejected, (state, action) => {
+        state.analysisLoading = false;
+        state.analysisError = action.payload;
       });
   },
 });
@@ -187,6 +219,7 @@ export const {
   resetFilters,
   setPagination,
   clearSelectedComplaint,
+  clearAnalysisResult,
   clearError,
 } = complaintSlice.actions;
 

@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { analyzeComplaint } from '../complaints/complaintSlice.js';
 
 const initialState = {
   severity: null,
@@ -37,6 +38,17 @@ const riskSlice = createSlice({
       }
     },
     clearRiskAssessment: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(analyzeComplaint.fulfilled, (state, action) => {
+      const payload = action.payload || {};
+      state.severity = payload.severity ?? null;
+      state.riskLevel = payload.risk_level ?? null;
+      state.initialAssessment = payload.initial_risk_assessment ?? null;
+      state.suggestedAction = payload.suggested_next_action ?? null;
+      state.confidence = payload.confidence ?? null;
+      state.missingFields = payload.missing_fields || [];
+    });
   },
 });
 
