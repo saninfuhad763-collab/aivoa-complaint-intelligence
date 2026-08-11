@@ -51,6 +51,22 @@ const STATUS_OPTIONS = [
   { value: 'REJECTED', label: 'Rejected' },
 ];
 
+const ALLOWED_SOURCES = new Set(['email', 'web_form', 'pdf_upload', 'phone', 'letter', 'other']);
+
+const normalizeComplaintSource = (incomingSource, existingSource) => {
+  if (existingSource && ALLOWED_SOURCES.has(existingSource)) {
+    return existingSource;
+  }
+  if (!incomingSource) {
+    return existingSource || '';
+  }
+  const lower = String(incomingSource).trim().toLowerCase();
+  if (ALLOWED_SOURCES.has(lower)) {
+    return lower;
+  }
+  return 'other';
+};
+
 export default function ComplaintForm() {
   const dispatch = useDispatch();
   const { loading, error, analysisResult } = useSelector((s) => s.complaints);
@@ -64,7 +80,9 @@ export default function ComplaintForm() {
       setForm((prevForm) => {
         const updated = { ...prevForm };
         Object.keys(data).forEach((key) => {
-          if (key in updated && data[key] !== null && data[key] !== undefined && data[key] !== '') {
+          if (key === 'complaint_source') {
+            updated.complaint_source = normalizeComplaintSource(data.complaint_source, prevForm.complaint_source);
+          } else if (key in updated && data[key] !== null && data[key] !== undefined && data[key] !== '') {
             updated[key] = String(data[key]);
           }
         });
