@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createNewComplaint, clearAnalysisResult } from '../../features/complaints/complaintSlice.js';
-import { clearRiskAssessment } from '../../features/risk/riskSlice.js';
+import {
+  fetchComplaints,
+  createNewComplaint,
+  updateExistingComplaint,
+  clearSelectedComplaint,
+  clearAnalysisResult,
+} from '../../features/complaints/complaintSlice.js';
+import { setRiskAssessment, clearRiskAssessment } from '../../features/risk/riskSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 import RiskAssessment from './RiskAssessment.jsx';
+import SavedComplaintsList from './SavedComplaintsList.jsx';
 
 const INITIAL_FORM = {
   complaint_number: '',
@@ -67,12 +74,58 @@ const normalizeComplaintSource = (incomingSource, existingSource) => {
   return 'other';
 };
 
+const formatDateValue = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string' && val.includes('T')) {
+    return val.split('T')[0];
+  }
+  return String(val);
+};
+
 export default function ComplaintForm() {
   const dispatch = useDispatch();
-  const { loading, error, analysisResult } = useSelector((s) => s.complaints);
+  const { loading, error, analysisResult, selectedComplaint } = useSelector((s) => s.complaints);
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Dispatch fetchComplaints on initial dashboard mount to load saved complaints from PostgreSQL
+  useEffect(() => {
+    dispatch(fetchComplaints());
+  }, [dispatch]);
+
+  // When a saved complaint is selected, populate form fields and risk assessment
+  useEffect(() => {
+    if (selectedComplaint) {
+      setForm({
+        complaint_number: selectedComplaint.complaint_number || '',
+        complaint_source: selectedComplaint.complaint_source || '',
+        customer_name: selectedComplaint.customer_name || '',
+        product_name: selectedComplaint.product_name || '',
+        product_strength: selectedComplaint.product_strength || '',
+        batch_number: selectedComplaint.batch_number || '',
+        manufacturing_date: formatDateValue(selectedComplaint.manufacturing_date),
+        expiry_date: formatDateValue(selectedComplaint.expiry_date),
+        affected_quantity: selectedComplaint.affected_quantity != null ? String(selectedComplaint.affected_quantity) : '',
+        affected_quantity_unit: selectedComplaint.affected_quantity_unit || '',
+        complaint_type: selectedComplaint.complaint_type || '',
+        complaint_date: formatDateValue(selectedComplaint.complaint_date),
+        complaint_description: selectedComplaint.complaint_description || '',
+        status: selectedComplaint.status || 'NEW',
+      });
+
+      if (selectedComplaint.severity || selectedComplaint.risk_level || selectedComplaint.initial_risk_assessment) {
+        dispatch(setRiskAssessment({
+          severity: selectedComplaint.severity,
+          riskLevel: selectedComplaint.risk_level,
+          initialAssessment: selectedComplaint.initial_risk_assessment,
+          suggestedAction: selectedComplaint.suggested_next_action,
+          confidence: selectedComplaint.ai_confidence,
+          missingFields: [],
+        }));
+      }
+    }
+  }, [selectedComplaint, dispatch]);
 
   useEffect(() => {
     if (analysisResult?.complaint_data) {
@@ -117,7 +170,6 @@ export default function ComplaintForm() {
 
   const buildPayload = () => {
     const payload = { ...form };
-    // Remove empty optional fields so backend receives null, not ""
     Object.keys(payload).forEach((k) => {
       if (payload[k] === '') {
         payload[k] = null;
@@ -137,18 +189,31 @@ export default function ComplaintForm() {
       return;
     }
 
-    const result = await dispatch(createNewComplaint(buildPayload()));
-    if (createNewComplaint.fulfilled.match(result)) {
+    const payload = buildPayload();
+    let actionResult;
+
+    if (selectedComplaint?.id) {
+      actionResult = await dispatch(updateExistingComplaint({ id: selectedComplaint.id, data: payload }));
+    } else {
+      actionResult = await dispatch(createNewComplaint(payload));
+    }
+
+    if (createNewComplaint.fulfilled.match(actionResult) || updateExistingComplaint.fulfilled.match(actionResult)) {
+      const saved = actionResult.payload;
+      const isUpdate = Boolean(selectedComplaint?.id);
       dispatch(addNotification({
         type: 'success',
-        message: `Complaint ${result.payload.complaint_number} saved successfully.`,
+        message: `Complaint ${saved.complaint_number} ${isUpdate ? 'updated' : 'saved'} successfully.`,
       }));
-      setForm(INITIAL_FORM);
-      setFieldErrors({});
+      dispatch(fetchComplaints());
+      if (!isUpdate) {
+        setForm(INITIAL_FORM);
+        setFieldErrors({});
+      }
     } else {
       dispatch(addNotification({
         type: 'error',
-        message: result.payload || 'Failed to save complaint.',
+        message: actionResult.payload || 'Failed to save complaint.',
       }));
     }
   };
@@ -156,6 +221,7 @@ export default function ComplaintForm() {
   const handleReset = () => {
     setForm(INITIAL_FORM);
     setFieldErrors({});
+    dispatch(clearSelectedComplaint());
     dispatch(clearAnalysisResult());
     dispatch(clearRiskAssessment());
   };
@@ -164,16 +230,21 @@ export default function ComplaintForm() {
     <div className="panel panel-left">
       {/* Panel header */}
       <div className="panel-header">
-        <span className="panel-title">Log Customer Complaint</span>
+        <span className="panel-title">
+          {selectedComplaint ? `Editing Complaint ${selectedComplaint.complaint_number}` : 'Log Customer Complaint'}
+        </span>
         <button
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={handleReset}
-          title="Clear form"
+          title="Clear form and create new entry"
         >
-          Clear
+          {selectedComplaint ? '+ New Entry' : 'Clear'}
         </button>
       </div>
+
+      {/* Saved complaints summary list */}
+      <SavedComplaintsList />
 
       {/* Form body */}
       <form onSubmit={handleSave} noValidate aria-label="Complaint entry form">

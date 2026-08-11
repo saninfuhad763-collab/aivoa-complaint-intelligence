@@ -897,3 +897,135 @@
 }
 
 .notification-close:hover { color: var(--text-primary); }
+
+/* --------------------------------------------------------------------------
+   Saved Complaints List Section
+   -------------------------------------------------------------------------- */
+.saved-complaints-section {
+  padding: 12px 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.saved-complaints-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.saved-complaints-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saved-complaints-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.saved-complaints-count {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-border);
+}
+
+.saved-complaints-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.saved-complaints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.saved-complaint-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.saved-complaint-item:hover {
+  border-color: var(--border-med);
+  background: var(--bg-panel);
+}
+
+.saved-complaint-item.selected {
+  border-color: var(--accent-border);
+  background: var(--accent-muted);
+}
+
+.saved-complaint-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.saved-complaint-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.status-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-new {
+  background: var(--info-muted);
+  color: var(--info);
+}
+
+.status-in_review {
+  background: var(--warning-muted);
+  color: var(--warning);
+}
+
+.status-under_investigation {
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+}
+
+.status-closed {
+  background: var(--success-muted);
+  color: var(--success);
+}
+
+.status-rejected {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.saved-complaint-details {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
