@@ -1,11 +1,14 @@
 """
-Tests for PDF text extraction service and POST /api/documents/extract-text endpoint.
+Tests for PDF text extraction service and document endpoints:
+- POST /api/documents/extract-text
+- POST /api/documents/analyze
 
 Programmatically generates test PDFs in memory to ensure no external test files
 or Groq dependencies are required.
 """
 import io
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -36,19 +39,14 @@ def generate_test_pdf(pages_text: list[str]) -> bytes:
             f"{page_id} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 99 0 R >> >> /Contents {stream_id} 0 R >>\nendobj\n".encode("latin1")
         )
 
-    for text in pages_text:
+    for i, text in enumerate(pages_text):
         stream_data = f"BT /F1 12 Tf 50 700 Td ({text}) Tj ET".encode("latin1")
-        objects.append(
-            f"<< /Length {len(stream_data)} >>\nstream\n".encode("latin1")
+        stream_obj = (
+            f"{content_offset + i} 0 obj\n<< /Length {len(stream_data)} >>\nstream\n".encode("latin1")
             + stream_data
-            + b"\nendstream\n"
+            + b"\nendstream\nendobj\n"
         )
-        # Fix stream object wrapping
-        objects[-1] = (
-            f"{content_offset + pages_text.index(text)} 0 obj\n".encode("latin1")
-            + objects[-1]
-            + b"endobj\n"
-        )
+        objects.append(stream_obj)
 
     out = io.BytesIO()
     out.write(b"%PDF-1.4\n")
@@ -63,6 +61,18 @@ def generate_test_pdf(pages_text: list[str]) -> bytes:
     out.write(f"trailer\n<< /Size {len(objects)+1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode("latin1"))
 
     return out.getvalue()
+
+
+def generate_blank_pdf() -> bytes:
+    """
+    Generate a valid PDF containing a blank page with no text content.
+    """
+    from pypdf import PdfWriter
+    writer = PdfWriter()
+    writer.add_blank_page(width=200, height=200)
+    stream = io.BytesIO()
+    writer.write(stream)
+    return stream.getvalue()
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +110,7 @@ def test_service_corrupted_bytes_raises():
 
 
 # ---------------------------------------------------------------------------
-# API endpoint tests: POST /api/documents/extract-text
+# Endpoint tests: POST /api/documents/extract-text
 # ---------------------------------------------------------------------------
 
 def test_api_extract_valid_pdf_success():
@@ -158,3 +168,118 @@ def test_api_malformed_pdf_rejected():
     response = client.post("/api/documents/extract-text", files=files)
     assert response.status_code == 400
     assert "corrupted" in response.json()["detail"].lower() or "pdf" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Endpoint tests: POST /api/documents/analyze
+# ---------------------------------------------------------------------------
+
+def test_api_analyze_valid_pdf_success():
+    pdf_bytes = generate_test_pdf(["Customer reported severe defect in batch BCH-9999 of Paracetamol."])
+    files = {
+        "file": ("complaint_report.pdf", pdf_bytes, "application/pdf")
+    }
+
+    mock_graph_result = {
+        "input_text": "Customer reported severe defect in batch BCH-9999 of Paracetamol.",
+        "source_type": "pdf_upload",
+        "complaint_data": {
+            "product_name": "Paracetamol",
+            "batch_number": "BCH-9999",
+            "complaint_source": "pdf_upload",
+            "complaint_description": "Customer reported severe defect in batch BCH-9999 of Paracetamol.",
+        },
+        "missing_fields": ["expiry_date"],
+        "validation_errors": [],
+        "complaint_category": "Quality Defect",
+        "severity": "High",
+        "risk_level": "Major",
+        "initial_risk_assessment": "Defect reported in batch BCH-9999 requires investigation.",
+        "suggested_next_action": "Quarantine affected lot and initiate QA investigation.",
+        "confidence": 0.95,
+        "messages": [{"role": "system", "content": "Analysis complete"}],
+        "document_metadata": {"filename": "complaint_report.pdf", "page_count": 1},
+    }
+
+    with patch("app.api.documents.complaint_graph.invoke", return_value=mock_graph_result) as mock_invoke:
+        response = client.post("/api/documents/analyze", files=files)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["complaint_data"]["product_name"] == "Paracetamol"
+        assert data["complaint_data"]["batch_number"] == "BCH-9999"
+        assert data["severity"] == "High"
+        assert data["risk_level"] == "Major"
+        assert data["document_metadata"]["filename"] == "complaint_report.pdf"
+        assert data["document_metadata"]["page_count"] == 1
+
+        mock_invoke.assert_called_once()
+        invoked_state = mock_invoke.call_args[0][0]
+        assert invoked_state["source_type"] == "pdf_upload"
+        assert "Customer reported severe defect" in invoked_state["input_text"]
+
+
+def test_api_analyze_multi_page_pdf_success():
+    pdf_bytes = generate_test_pdf([
+        "Page 1: Complaint submitted for Ibuprofen 400mg.",
+        "Page 2: Batch lot number BCH-5555 manufacturing date 2024-01-01."
+    ])
+    files = {
+        "file": ("multi_report.pdf", pdf_bytes, "application/pdf")
+    }
+
+    mock_graph_result = {
+        "input_text": "Page 1: Complaint submitted for Ibuprofen 400mg.\n\nPage 2: Batch lot number BCH-5555 manufacturing date 2024-01-01.",
+        "source_type": "pdf_upload",
+        "complaint_data": {
+            "product_name": "Ibuprofen",
+            "product_strength": "400mg",
+            "batch_number": "BCH-5555",
+            "complaint_source": "pdf_upload",
+        },
+        "missing_fields": [],
+        "validation_errors": [],
+        "severity": "Medium",
+        "risk_level": "Minor",
+        "confidence": 0.90,
+        "document_metadata": {"filename": "multi_report.pdf", "page_count": 2},
+    }
+
+    with patch("app.api.documents.complaint_graph.invoke", return_value=mock_graph_result) as mock_invoke:
+        response = client.post("/api/documents/analyze", files=files)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["complaint_data"]["product_name"] == "Ibuprofen"
+        assert data["document_metadata"]["page_count"] == 2
+
+        invoked_state = mock_invoke.call_args[0][0]
+        assert "Page 1: Complaint" in invoked_state["input_text"]
+        assert "Page 2: Batch" in invoked_state["input_text"]
+
+
+def test_api_analyze_invalid_pdf_rejected():
+    files = {
+        "file": ("document.docx", b"Not a PDF file content", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    }
+    response = client.post("/api/documents/analyze", files=files)
+    assert response.status_code == 400
+    assert "Only PDF files are accepted" in response.json()["detail"]
+
+
+def test_api_analyze_empty_pdf_rejected():
+    files = {
+        "file": ("empty.pdf", b"", "application/pdf")
+    }
+    response = client.post("/api/documents/analyze", files=files)
+    assert response.status_code == 400
+    assert "empty" in response.json()["detail"].lower()
+
+
+def test_api_analyze_pdf_no_extractable_text_rejected():
+    blank_pdf = generate_blank_pdf()
+    files = {
+        "file": ("blank.pdf", blank_pdf, "application/pdf")
+    }
+    response = client.post("/api/documents/analyze", files=files)
+    assert response.status_code == 400
+    assert "no extractable text" in response.json()["detail"].lower()
