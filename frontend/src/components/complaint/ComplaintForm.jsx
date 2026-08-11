@@ -10,6 +10,7 @@ import {
 import { setRiskAssessment, clearRiskAssessment } from '../../features/risk/riskSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 import RiskAssessment from './RiskAssessment.jsx';
+import ComplaintnessChecker from './ComplaintnessChecker.jsx';
 import SavedComplaintsList from './SavedComplaintsList.jsx';
 
 const INITIAL_FORM = {
@@ -530,6 +531,9 @@ export default function ComplaintForm() {
 
       {/* Risk Assessment card below the form */}
       <RiskAssessment />
+
+      {/* Completeness Checker — reads existing backend missing_fields/validation_errors */}
+      <ComplaintnessChecker />
     </div>
   );
 }
