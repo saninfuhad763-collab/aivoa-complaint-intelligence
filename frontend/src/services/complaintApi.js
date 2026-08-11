@@ -68,7 +68,9 @@ export const complaintApi = {
   analyzePdf: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await apiClient.post('/api/v1/documents/analyze', formData);
+    const response = await apiClient.post('/api/documents/analyze', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   },
 };

@@ -17,6 +17,7 @@ export default function CopilotInput() {
   const input = useSelector((s) => s.copilot.input);
   const copilotLoading = useSelector((s) => s.copilot.loading);
   const analysisLoading = useSelector((s) => s.complaints.analysisLoading);
+  const analysisResult = useSelector((s) => s.complaints.analysisResult);
   const messages = useSelector((s) => s.copilot.messages);
   const textareaRef = useRef(null);
 
@@ -95,6 +96,14 @@ export default function CopilotInput() {
 
   const handleAnalyze = () => {
     const text = input.trim();
+    // If textarea is empty and a prior analysis already exists, block redundant re-analysis.
+    if (!text && analysisResult) {
+      dispatch(addNotification({
+        type: 'info',
+        message: 'Complaint already analyzed. Edit the form or paste new text to re-analyze.',
+      }));
+      return;
+    }
     if (text) {
       dispatch(addMessage({ role: 'user', content: text }));
       dispatch(setInput(''));
