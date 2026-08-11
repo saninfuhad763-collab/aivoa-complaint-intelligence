@@ -70,6 +70,17 @@ export const analyzeComplaint = createAsyncThunk(
   }
 );
 
+export const analyzePdfComplaint = createAsyncThunk(
+  'complaints/analyzePdfComplaint',
+  async (file, { rejectWithValue }) => {
+    try {
+      return await complaintApi.analyzePdf(file);
+    } catch (err) {
+      return rejectWithValue(extractErrorMessage(err));
+    }
+  }
+);
+
 const initialState = {
   complaints: [],
   selectedComplaint: null,
@@ -208,6 +219,19 @@ const complaintSlice = createSlice({
         state.analysisResult = action.payload;
       })
       .addCase(analyzeComplaint.rejected, (state, action) => {
+        state.analysisLoading = false;
+        state.analysisError = action.payload;
+      })
+      // analyzePdfComplaint
+      .addCase(analyzePdfComplaint.pending, (state) => {
+        state.analysisLoading = true;
+        state.analysisError = null;
+      })
+      .addCase(analyzePdfComplaint.fulfilled, (state, action) => {
+        state.analysisLoading = false;
+        state.analysisResult = action.payload;
+      })
+      .addCase(analyzePdfComplaint.rejected, (state, action) => {
         state.analysisLoading = false;
         state.analysisError = action.payload;
       });

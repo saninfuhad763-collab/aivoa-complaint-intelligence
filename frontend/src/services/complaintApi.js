@@ -59,6 +59,18 @@ export const complaintApi = {
     const response = await apiClient.post('/api/complaints/analyze', data);
     return response.data;
   },
+
+  /**
+   * Perform AI analysis on an uploaded PDF document.
+   * POST /api/v1/documents/analyze
+   * @param {File} file - PDF file object
+   */
+  analyzePdf: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/api/v1/documents/analyze', formData);
+    return response.data;
+  },
 };
 
 export default complaintApi;
