@@ -14,6 +14,7 @@ import {
 import { setRiskAssessment, clearRiskAssessment, patchMissingFields } from '../../features/risk/riskSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 import RiskAssessment from './RiskAssessment.jsx';
+import CapaRecommendation from './CapaRecommendation.jsx';
 import ComplaintnessChecker from './ComplaintnessChecker.jsx';
 import DuplicateWarning from './DuplicateWarning.jsx';
 import SavedComplaintsList from './SavedComplaintsList.jsx';
@@ -613,6 +614,9 @@ export default function ComplaintForm() {
 
       {/* Risk Assessment card below the form */}
       <RiskAssessment />
+
+      {/* CAPA Recommendation Advisory card */}
+      <CapaRecommendation />
 
       {/* Completeness Checker — reads existing backend missing_fields/validation_errors */}
       <ComplaintnessChecker />
