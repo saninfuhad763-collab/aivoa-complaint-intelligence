@@ -69,28 +69,28 @@ const FIELD_LABELS = {
 
 const FIELD_PATTERNS = [
   // customer_name
-  { pattern: /customer[\s_]?name(?:\s+is|:)\s+(.+)/i, field: 'customer_name' },
+  { pattern: /customer[\s_]?name(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(.+)/i, field: 'customer_name' },
   // product_name
-  { pattern: /product[\s_]?name(?:\s+is|:|\s+to)\s+(.+)/i, field: 'product_name' },
+  { pattern: /product[\s_]?name(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(.+)/i, field: 'product_name' },
   // product_strength
-  { pattern: /(?:strength|dosage|form|product[\s_]?strength)(?:\s+is|:|\s+to)\s+(.+)/i, field: 'product_strength' },
+  { pattern: /(?:strength|dosage|form|product[\s_]?strength)(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(.+)/i, field: 'product_strength' },
   // batch_number
-  { pattern: /(?:batch|lot|batch[\s_]?number|lot[\s_]?number)(?:\s+is|:|\s+to)\s+(.+)/i, field: 'batch_number' },
+  { pattern: /(?:batch|lot|batch[\s_]?number|lot[\s_]?number)(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(.+)/i, field: 'batch_number' },
   // complaint_type
-  { pattern: /complaint[\s_]?type(?:\s+is|:|\s+to)\s+(.+)/i, field: 'complaint_type' },
+  { pattern: /complaint[\s_]?type(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(.+)/i, field: 'complaint_type' },
   // complaint_date
-  { pattern: /complaint[\s_]?date(?:\s+is|:|\s+to)\s+(.+)/i, field: 'complaint_date' },
+  { pattern: /complaint[\s_]?date(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(.+)/i, field: 'complaint_date' },
   // manufacturing_date
-  { pattern: /(?:manufacturing[\s_]?date|manufactured[\s_]?on|manufactured)(?:\s+is|:|\s+to)?\s+(.+)/i, field: 'manufacturing_date' },
+  { pattern: /(?:manufacturing[\s_]?date|manufactured[\s_]?on|manufactured)(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])?\s+(.+)/i, field: 'manufacturing_date' },
   // expiry_date
-  { pattern: /(?:expiry[\s_]?date|expiry|expiration[\s_]?date|expires[\s_]?on)(?:\s+is|:|\s+to)?\s+(.+)/i, field: 'expiry_date' },
+  { pattern: /(?:expiry[\s_]?date|expiry|expiration[\s_]?date|expires[\s_]?on)(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])?\s+(.+)/i, field: 'expiry_date' },
   // affected_quantity — extract the numeric portion
-  { pattern: /(?:affected[\s_]?quantity|quantity[\s_]?affected|quantity)(?:\s+is|:|\s+to)\s+(\d+(?:\.\d+)?)/i, field: 'affected_quantity' },
+  { pattern: /(?:affected[\s_]?quantity|quantity[\s_]?affected|quantity)(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+(\d+(?:\.\d+)?)/i, field: 'affected_quantity' },
   // affected_quantity_unit — extract unit from quantity sentence
-  { pattern: /(?:affected[\s_]?quantity|quantity[\s_]?affected|quantity)(?:\s+is|:|\s+to)\s+\d+(?:\.\d+)?\s+(.+)/i, field: 'affected_quantity_unit' },
+  { pattern: /(?:affected[\s_]?quantity|quantity[\s_]?affected|quantity)(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])\s+\d+(?:\.\d+)?\s+(.+)/i, field: 'affected_quantity_unit' },
   // complaint_description — only when user explicitly asks to change/update it
   {
-    pattern: /(?:change|update|set|replace)\s+(?:the\s+)?(?:complaint[\s_]?)?description\s+to\s*:?\s+(.+)/i,
+    pattern: /(?:change|update|set|replace)\s+(?:the\s+)?(?:complaint[\s_]?)?description(?:\s+(?:field\s+)?(?:is|to|as|=|:)|[:=])?\s*:?\s+(.+)/i,
     field: 'complaint_description',
   },
 ];

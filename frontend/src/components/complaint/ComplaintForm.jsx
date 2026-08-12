@@ -144,6 +144,7 @@ export default function ComplaintForm() {
       // no-op when analysisResult is null — i.e. after a page refresh).
       dispatch(seedAnalysisResult({
         complaint_data: {
+          complaint_number: selectedComplaint.complaint_number || null,
           customer_name: selectedComplaint.customer_name || null,
           product_name: selectedComplaint.product_name || null,
           batch_number: selectedComplaint.batch_number || null,
