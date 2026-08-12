@@ -142,6 +142,12 @@
 }
 
 @media (max-width: 1024px) {
+  .app-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
   .panel-left,
   .panel-right {
     border-right: none;
@@ -217,6 +223,7 @@
 }
 
 @media (max-width: 640px) {
+  .header-subtitle { display: none; }
   .form-grid-2 {
     grid-template-columns: 1fr;
   }
@@ -860,7 +867,7 @@
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
-  max-width: 340px;
+  max-width: min(340px, calc(100vw - 32px));
   width: 100%;
 }
 
