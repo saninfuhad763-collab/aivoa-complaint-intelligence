@@ -81,3 +81,80 @@ def test_graph_runs_without_external_llm_calls():
     assert final_state["complaint_category"] == "Quality Defect"
     assert final_state["complaint_data"]["product_name"] == "OfflineTest"
     assert len(final_state["missing_fields"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Risk severity regression tests — negation-aware keyword matching
+# ---------------------------------------------------------------------------
+
+def test_risk_negated_keywords_produce_low_severity():
+    """
+    Complaint that explicitly negates all critical/high keywords must not
+    trigger Critical or High severity (fixes negation false-positive bug).
+
+    Exact sentence from manual test:
+    'No product defect, damage, contamination, adverse event, potency issue,
+     or safety concern has been reported.'
+    """
+    input_state: ComplaintState = {
+        "input_text": (
+            "Customer Maya Nair has a general product information inquiry regarding "
+            "Aivoa TestClear 250mg Capsules from batch LOWQA-2026-002. "
+            "The customer is requesting clarification about the product's storage instructions. "
+            "No product defect, damage, contamination, adverse event, potency issue, "
+            "or safety concern has been reported."
+        ),
+        "source_type": "text",
+        "complaint_data": {
+            "product_name": "Aivoa TestClear 250mg Capsules",
+            "batch_number": "LOWQA-2026-002",
+            "customer_name": "Maya Nair",
+            "complaint_type": "Other",
+            "complaint_description": (
+                "No product defect, damage, contamination, adverse event, potency issue, "
+                "or safety concern has been reported."
+            ),
+        }
+    }
+
+    final_state = complaint_graph.invoke(input_state)
+
+    assert final_state["severity"] == "Low", (
+        f"Expected Low severity for negated complaint, got: {final_state['severity']}"
+    )
+    assert final_state["risk_level"] == "Minor", (
+        f"Expected Minor risk level, got: {final_state['risk_level']}"
+    )
+
+
+def test_risk_positive_contamination_produces_critical_severity():
+    """
+    Complaint that positively reports contamination must trigger Critical severity.
+    Ensures the negation fix does not suppress genuine critical signals.
+    """
+    input_state: ComplaintState = {
+        "input_text": (
+            "The batch showed visible contamination. Foreign particles were found inside "
+            "the blister pack of Amoxicillin 500mg from batch AMX-2026-001."
+        ),
+        "source_type": "text",
+        "complaint_data": {
+            "product_name": "Amoxicillin 500mg",
+            "batch_number": "AMX-2026-001",
+            "customer_name": "John Smith",
+            "complaint_type": "Contamination",
+            "complaint_description": (
+                "The batch showed visible contamination. Foreign particles were found "
+                "inside the blister pack."
+            ),
+        }
+    }
+
+    final_state = complaint_graph.invoke(input_state)
+
+    assert final_state["severity"] == "Critical", (
+        f"Expected Critical severity for contamination complaint, got: {final_state['severity']}"
+    )
+    assert final_state["risk_level"] == "Critical", (
+        f"Expected Critical risk level, got: {final_state['risk_level']}"
+    )

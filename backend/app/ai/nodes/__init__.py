@@ -140,42 +140,132 @@ def classify_complaint(state: ComplaintState) -> Dict[str, Any]:
     }
 
 
+import re as _re
+
+
+def _keyword_present(text: str, keyword: str) -> bool:
+    """
+    Return True only when the keyword appears in a clause/sentence that does NOT
+    contain a negation word (no, not, without, none, never) BEFORE the keyword.
+
+    Uses sentence-level detection (split on . ! ?) instead of a fixed-width
+    character window, so comma-separated negation lists like:
+        "no contamination, adverse event, potency issue, or safety concern"
+    correctly negate ALL items regardless of their position in the list.
+    """
+    _negation = _re.compile(
+        r'\b(no|not|none|without|never|non|no sign of|no evidence of|'
+        r'no report of|no indication of)\b',
+        _re.IGNORECASE
+    )
+    # Split text into sentences/clauses on sentence terminators
+    clauses = _re.split(r'[.!?]', text)
+    for clause in clauses:
+        if keyword not in clause:
+            continue
+        # Find each occurrence of the keyword inside this clause
+        for m in _re.finditer(_re.escape(keyword), clause):
+            before_keyword = clause[:m.start()]
+            if _negation.search(before_keyword):
+                continue  # keyword is negated in this clause — skip
+            return True   # at least one non-negated occurrence found
+    return False
+
+
 def assess_risk(state: ComplaintState) -> Dict[str, Any]:
     """
-    Step 5: Perform AI risk assessment.
-    Deterministic baseline logic for foundation phase.
-    """
-    missing_fields = state.get("missing_fields", [])
+    Step 5: Perform AI risk assessment using a deterministic, complaint-sensitive
+    pharmaceutical risk decision matrix based on complaint substance.
 
-    if len(missing_fields) >= 3:
+    Uses negation-aware keyword matching to avoid false positives when safety
+    terms are explicitly negated (e.g., "no contamination", "no adverse event").
+    """
+    complaint_data = state.get("complaint_data", {}) or {}
+    input_text = (state.get("input_text") or "").lower()
+    description = (complaint_data.get("complaint_description") or "").lower()
+    complaint_type = (complaint_data.get("complaint_type") or "").lower()
+    qty = complaint_data.get("affected_quantity")
+    missing_fields = state.get("missing_fields", []) or []
+
+    combined_text = f"{input_text} {description} {complaint_type}".strip()
+
+    # 1. Critical severity signals (contamination, safety hazard, toxic, severe adverse event)
+    critical_keywords = [
+        "contamination", "contaminate", "foreign matter", "particle", "glass",
+        "adverse event", "anaphylaxis", "hospitalized", "hospitalisation",
+        "death", "fatal", "poison", "toxic", "organ failure", "expired product"
+    ]
+    is_critical = any(_keyword_present(combined_text, kw) for kw in critical_keywords)
+
+    # 2. High severity signals (dosage, labeling, potency, large affected quantity)
+    high_keywords = [
+        "mislabeling", "mislabel", "mislabelled", "dosage error", "potency",
+        "efficacy", "strength failure", "subpotent", "superpotent"
+    ]
+    is_high = (
+        any(_keyword_present(combined_text, kw) for kw in high_keywords)
+        or (qty is not None and isinstance(qty, (int, float)) and qty >= 100)
+    )
+
+    # 3. Medium severity signals (packaging, discoloration, odor, physical defect)
+    medium_keywords = [
+        "packaging", "seal", "discoloration", "discoloured", "odor", "odour",
+        "damage", "broken", "leak", "leaking", "crack", "cracked", "chip", "chipped"
+    ]
+    is_medium = (
+        any(_keyword_present(combined_text, kw) for kw in medium_keywords)
+        or len(missing_fields) >= 3
+    )
+
+    # 4. Decision matrix evaluation
+    if is_critical:
+        severity = "Critical"
+        risk_level = "Critical"
+        assessment = "Critical safety event detected: potential product contamination, foreign matter, or high-impact adverse patient safety risk."
+    elif is_high:
+        severity = "High"
+        risk_level = "Major"
+        assessment = "High-risk quality defect identified affecting dosage integrity, labeling compliance, or product potency/efficacy."
+    elif is_medium:
         severity = "Medium"
-        risk_level = "Minor"
-        assessment = "Preliminary intake: Multiple fields missing. Further investigation required."
-        confidence = state.get("confidence") or 0.5
+        risk_level = "Major" if len(missing_fields) >= 3 else "Minor"
+        assessment = "Moderate quality defect identified requiring standard batch record verification and warehouse containment."
     else:
         severity = "Low"
         risk_level = "Minor"
-        assessment = "Standard complaint intake processed."
-        confidence = state.get("confidence") or 0.8
+        assessment = "Standard routine complaint intake processed with low direct risk impact."
+
+    # 5. Confidence calculation
+    # Missing information reduces confidence/readiness, NOT risk severity.
+    base_confidence = state.get("confidence")
+    if base_confidence is None or not isinstance(base_confidence, (int, float)):
+        base_confidence = 0.85
+
+    penalty = len(missing_fields) * 0.10
+    final_confidence = max(0.30, round(base_confidence - penalty, 2))
 
     return {
         "severity": severity,
         "risk_level": risk_level,
         "initial_risk_assessment": assessment,
-        "confidence": confidence,
+        "confidence": final_confidence,
     }
 
 
 def recommend_action(state: ComplaintState) -> Dict[str, Any]:
     """
-    Step 6: Recommend next QA workflow action based on risk assessment.
+    Step 6: Recommend next QA workflow action based on evaluated risk severity.
     """
     severity = state.get("severity", "Low")
 
-    if severity in ("High", "Critical"):
-        action = "Initiate immediate QA investigation, log CAPA workflow, and notify Quality Manager."
+    if severity == "Critical":
+        action = "Initiate immediate QA investigation, place lot on immediate quality hold, quarantine inventory, and notify Quality Director & Regulatory Affairs."
+    elif severity == "High":
+        action = "Initiate QA investigation, place affected batch on quality hold, notify Quality Manager, and perform retain sample testing."
+    elif severity == "Medium":
+        action = "Verify batch manufacturing records, inspect warehouse stock, and log standard QA investigation."
     else:
-        action = "Log complaint, verify batch records, and await standard QA review."
+        action = "Log complaint, verify batch records, and await routine QA review."
 
     return {
         "suggested_next_action": action,
