@@ -99,12 +99,12 @@ const formatDateValue = (val) => {
 
 export default function ComplaintForm() {
   const dispatch = useDispatch();
-  const { loading, error, analysisResult, selectedComplaint } = useSelector((s) => s.complaints);
-  // Fix A: read current risk state so it can be included in the save payload
+  const { selectedComplaint, analysisResult, loading, error, complaints } = useSelector((s) => s.complaints);
   const riskState = useSelector((s) => s.risk);
 
   const [form, setForm] = useState(INITIAL_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [showSavedList, setShowSavedList] = useState(false);
 
   // Dispatch fetchComplaints on initial dashboard mount to load saved complaints from PostgreSQL
   useEffect(() => {
@@ -329,9 +329,6 @@ export default function ComplaintForm() {
           {selectedComplaint ? '+ New Entry' : 'Clear'}
         </button>
       </div>
-
-      {/* Saved complaints summary list */}
-      <SavedComplaintsList />
 
       {/* Form body */}
       <form onSubmit={handleSave} noValidate aria-label="Complaint entry form">
@@ -578,51 +575,70 @@ export default function ComplaintForm() {
               <span className="notification-message">{error}</span>
             </div>
           )}
-        </div>
 
-        {/* Form actions */}
-        <div className="form-actions">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-            aria-busy={loading}
-          >
-            {loading
-              ? <><span className="btn-spinner" aria-hidden="true" />Saving…</>
-              : <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
-                    <polyline points="17 21 17 13 7 13 7 21"/>
-                    <polyline points="7 3 7 8 15 8"/>
-                  </svg>
-                  Save Complaint
-                </>
-            }
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleReset}
-            disabled={loading}
-          >
-            Reset
-          </button>
+          {/* Form actions */}
+          <div className="form-actions">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              aria-busy={loading}
+            >
+              {loading
+                ? <><span className="btn-spinner" aria-hidden="true" />Saving…</>
+                : <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                      <polyline points="17 21 17 13 7 13 7 21"/>
+                      <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Save Complaint
+                  </>
+              }
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleReset}
+              disabled={loading}
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              className={`btn ${showSavedList ? 'btn-secondary' : 'btn-ghost'}`}
+              onClick={() => setShowSavedList((prev) => !prev)}
+              aria-expanded={showSavedList}
+              title="Toggle saved complaints history"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+              </svg>
+              Saved Complaints ({complaints?.length || 0})
+            </button>
+          </div>
+
+          {showSavedList && (
+            <div style={{ marginTop: 12 }}>
+              <SavedComplaintsList />
+            </div>
+          )}
+
+          {/* Risk Assessment card below the form */}
+          <RiskAssessment />
+
+          {/* CAPA Recommendation Advisory card */}
+          <CapaRecommendation />
+
+          {/* Completeness Checker — reads existing backend missing_fields/validation_errors */}
+          <ComplaintnessChecker />
+
+          {/* Advisory Duplicate Complaint Warning */}
+          <DuplicateWarning />
         </div>
       </form>
-
-      {/* Risk Assessment card below the form */}
-      <RiskAssessment />
-
-      {/* CAPA Recommendation Advisory card */}
-      <CapaRecommendation />
-
-      {/* Completeness Checker — reads existing backend missing_fields/validation_errors */}
-      <ComplaintnessChecker />
-
-      {/* Advisory Duplicate Complaint Warning */}
-      <DuplicateWarning />
     </div>
   );
 }

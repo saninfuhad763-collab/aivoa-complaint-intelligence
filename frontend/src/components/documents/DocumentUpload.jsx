@@ -4,12 +4,10 @@ import { analyzePdfComplaint } from '../../features/complaints/complaintSlice.js
 import { addMessage, setLoading } from '../../features/copilot/copilotSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 
-const UploadIcon = () => (
-  <svg className="dropzone-icon" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-    <polyline points="17 8 12 3 7 8" />
-    <line x1="12" y1="3" x2="12" y2="15" />
+const PaperclipIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
   </svg>
 );
 
@@ -175,16 +173,18 @@ export default function DocumentUpload({ file, onFileChange }) {
             tabIndex={-1}
             disabled={isProcessing}
           />
-          <div className="dropzone-inner">
+          <div className="dropzone-compact-inner">
             {isProcessing ? (
               <>
-                <span className="btn-spinner" aria-hidden="true" style={{ width: 20, height: 20 }} />
+                <span className="btn-spinner" aria-hidden="true" style={{ width: 14, height: 14 }} />
                 <span className="dropzone-text">Extracting & analyzing PDF…</span>
               </>
             ) : (
               <>
-                <UploadIcon />
-                <span className="dropzone-text">Drop PDF or click to browse</span>
+                <span className="btn-attach-pill">
+                  <PaperclipIcon />
+                  Attach PDF
+                </span>
                 <span className="dropzone-hint">PDF upload for AI complaint extraction</span>
               </>
             )}

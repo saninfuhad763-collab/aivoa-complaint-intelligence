@@ -58,14 +58,38 @@ const OPTIONAL_FIELD_LABELS = {
 
 export default function ComplaintnessChecker() {
   const { missingFields } = useSelector((s) => s.risk);
-  const analysisResult = useSelector((s) => s.complaints.analysisResult);
+  const { analysisResult, selectedComplaint } = useSelector((s) => s.complaints);
+  const hasData = Boolean(analysisResult || selectedComplaint);
 
-  // Only render after at least one analysis has been performed
-  if (!analysisResult) return null;
+  if (!hasData) {
+    return (
+      <div className="completeness-card" role="region" aria-label="Complaint Readiness">
+        <div className="completeness-header">
+          <span className="completeness-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+            Completeness Check
+          </span>
+          <span className="completeness-badge completeness-needed">
+            <AlertIcon />
+            Awaiting Analysis
+          </span>
+        </div>
+        <div style={{ padding: '14px 14px', textAlign: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
+          Completeness check will evaluate required fields after complaint analysis.
+        </div>
+      </div>
+    );
+  }
 
   const missingCore = missingFields || [];
-  const complaintData = analysisResult.complaint_data || {};
-  const validationErrors = analysisResult.validation_errors || [];
+  // Safely access complaint_data: analysisResult may be null when a saved
+  // complaint has been reopened without re-running analysis.
+  const complaintData = analysisResult?.complaint_data ?? selectedComplaint ?? {};
+  const validationErrors = analysisResult?.validation_errors || [];
 
   // Single source of truth for readiness: all 5 core required fields present
   const isReady = missingCore.length === 0;

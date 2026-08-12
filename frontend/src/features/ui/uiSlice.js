@@ -16,10 +16,23 @@ const uiSlice = createSlice({
     },
     addNotification: (state, action) => {
       // action.payload: { type: 'success'|'error'|'info'|'warning', message: string }
+      const { type = 'info', message } = action.payload;
+
+      // Deduplicate: skip if an identical message+type is already visible
+      const isDuplicate = state.notifications.some(
+        (n) => n.type === type && n.message === message
+      );
+      if (isDuplicate) return;
+
+      // Cap at 3 visible notifications — drop the oldest when over the limit
+      if (state.notifications.length >= 3) {
+        state.notifications.shift();
+      }
+
       state.notifications.push({
         id: Date.now().toString(),
-        type: action.payload.type || 'info',
-        message: action.payload.message,
+        type,
+        message,
       });
     },
     removeNotification: (state, action) => {

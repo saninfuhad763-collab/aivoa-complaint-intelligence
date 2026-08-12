@@ -8,7 +8,9 @@
 .app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   background: var(--bg-app);
 }
 
@@ -419,11 +421,13 @@
    Risk Assessment Card
    -------------------------------------------------------------------------- */
 .risk-card {
-  margin: 0 20px 20px;
+  margin: 16px 0 0;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .risk-card-header {
@@ -530,6 +534,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -716,7 +721,7 @@
    -------------------------------------------------------------------------- */
 .doc-upload-section {
   border-top: 1px solid var(--border-subtle);
-  padding: 12px 16px;
+  padding: 8px 16px;
   flex-shrink: 0;
 }
 
@@ -726,17 +731,18 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .dropzone {
-  border: 1.5px dashed var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  text-align: center;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  text-align: left;
   cursor: pointer;
   transition: border-color var(--transition), background var(--transition);
   position: relative;
+  background: var(--bg-surface);
 }
 
 .dropzone:hover,
@@ -754,12 +760,33 @@
   height: 100%;
 }
 
-.dropzone-inner {
+.dropzone-compact-inner {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   pointer-events: none;
+}
+
+.btn-attach-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-hover);
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  flex-shrink: 0;
+}
+
+.dropzone-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropzone-icon {
@@ -1050,11 +1077,13 @@
    Complaint Completeness Checker Card
    -------------------------------------------------------------------------- */
 .completeness-card {
-  margin: 0 20px 20px;
+  margin: 16px 0 0;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .completeness-header {
@@ -1181,7 +1210,9 @@
   border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: var(--radius-md);
   padding: 12px 14px;
-  margin-top: 14px;
+  margin: 16px 0 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .duplicate-warning-header {
@@ -1291,7 +1322,9 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 14px 16px;
-  margin-top: 14px;
+  margin: 16px 0 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .capa-card-header {
