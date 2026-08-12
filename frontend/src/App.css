@@ -1172,3 +1172,113 @@
   margin: 8px 0 0;
   line-height: 1.4;
 }
+
+/* --------------------------------------------------------------------------
+   Duplicate Warning Component
+   -------------------------------------------------------------------------- */
+.duplicate-warning-card {
+  background: rgba(245, 158, 11, 0.07);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+
+.duplicate-warning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.duplicate-warning-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warning);
+}
+
+.duplicate-warning-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.15);
+  border-radius: 12px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.duplicate-warning-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0 0 10px 0;
+  line-height: 1.35;
+}
+
+.duplicate-candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.duplicate-candidate-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.duplicate-candidate-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.duplicate-candidate-number {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.duplicate-confidence-tag {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tag-high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.tag-med {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.duplicate-candidate-reason {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-heading);
+  margin-bottom: 4px;
+}
+
+.duplicate-candidate-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.duplicate-detail strong {
+  color: var(--text-body);
+}

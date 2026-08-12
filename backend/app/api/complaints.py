@@ -11,7 +11,10 @@ from app.schemas.complaint import (
     ComplaintResponse,
     ComplaintListResponse,
     ComplaintListItem,
+    DuplicateCheckRequest,
+    DuplicateCheckResponse,
 )
+from app.services.duplicate_service import find_duplicate_complaints
 
 router = APIRouter(prefix="/complaints", tags=["Complaints"])
 
@@ -78,6 +81,23 @@ def list_complaints(
         total=total,
         page=page,
         page_size=page_size
+    )
+
+
+@router.post("/check-duplicates", response_model=DuplicateCheckResponse)
+def check_duplicates(
+    payload: DuplicateCheckRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Check for potential duplicate complaints in PostgreSQL.
+
+    Advisory endpoint — does not mutate the database or reject complaints.
+    """
+    candidates = find_duplicate_complaints(db, payload)
+    return DuplicateCheckResponse(
+        has_duplicates=len(candidates) > 0,
+        duplicates=candidates
     )
 
 

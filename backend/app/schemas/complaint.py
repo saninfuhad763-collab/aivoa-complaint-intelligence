@@ -197,3 +197,45 @@ class ComplaintListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# ---------------------------------------------------------------------------
+# Duplicate Detection Schemas
+# ---------------------------------------------------------------------------
+
+class DuplicateCheckRequest(BaseModel):
+    """Payload for checking potential duplicate complaints."""
+
+    product_name: Optional[str] = Field(None, description="Name of the product")
+    batch_number: Optional[str] = Field(None, description="Batch/lot number")
+    customer_name: Optional[str] = Field(None, description="Customer name")
+    exclude_id: Optional[int] = Field(None, description="Complaint ID to exclude (used when editing)")
+
+    @field_validator("product_name", "batch_number", "customer_name", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        return v.strip() if isinstance(v, str) else v
+
+
+class DuplicateCandidate(BaseModel):
+    """Detailed metadata for a candidate duplicate complaint."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    complaint_number: str
+    product_name: Optional[str] = None
+    batch_number: Optional[str] = None
+    customer_name: Optional[str] = None
+    complaint_type: Optional[str] = None
+    status: str
+    created_at: datetime
+    match_reason: str = Field(..., description="Human-readable explanation of why this complaint matched")
+    match_confidence: str = Field(..., description="'high' or 'medium'")
+
+
+class DuplicateCheckResponse(BaseModel):
+    """Response containing matching duplicate candidates."""
+
+    has_duplicates: bool
+    duplicates: List[DuplicateCandidate]

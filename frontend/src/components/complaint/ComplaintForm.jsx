@@ -8,11 +8,14 @@ import {
   clearAnalysisResult,
   patchAnalysisResult,
   seedAnalysisResult,
+  checkDuplicateComplaints,
+  clearDuplicates,
 } from '../../features/complaints/complaintSlice.js';
 import { setRiskAssessment, clearRiskAssessment, patchMissingFields } from '../../features/risk/riskSlice.js';
 import { addNotification } from '../../features/ui/uiSlice.js';
 import RiskAssessment from './RiskAssessment.jsx';
 import ComplaintnessChecker from './ComplaintnessChecker.jsx';
+import DuplicateWarning from './DuplicateWarning.jsx';
 import SavedComplaintsList from './SavedComplaintsList.jsx';
 
 const INITIAL_FORM = {
@@ -189,6 +192,27 @@ export default function ComplaintForm() {
     }
   }, [analysisResult]);
 
+  // Trigger duplicate detection when product_name, batch_number, or customer_name changes
+  useEffect(() => {
+    const prod = form.product_name?.trim();
+    const batch = form.batch_number?.trim();
+    const customer = form.customer_name?.trim();
+
+    if (prod) {
+      const timer = setTimeout(() => {
+        dispatch(checkDuplicateComplaints({
+          product_name: prod,
+          batch_number: batch || null,
+          customer_name: customer || null,
+          exclude_id: selectedComplaint?.id || null,
+        }));
+      }, 400);
+      return () => clearTimeout(timer);
+    } else {
+      dispatch(clearDuplicates());
+    }
+  }, [form.product_name, form.batch_number, form.customer_name, selectedComplaint?.id, dispatch]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => {
@@ -285,6 +309,7 @@ export default function ComplaintForm() {
     dispatch(clearSelectedComplaint());
     dispatch(clearAnalysisResult());
     dispatch(clearRiskAssessment());
+    dispatch(clearDuplicates());
   };
 
   return (
@@ -591,6 +616,9 @@ export default function ComplaintForm() {
 
       {/* Completeness Checker — reads existing backend missing_fields/validation_errors */}
       <ComplaintnessChecker />
+
+      {/* Advisory Duplicate Complaint Warning */}
+      <DuplicateWarning />
     </div>
   );
 }

@@ -81,6 +81,17 @@ export const analyzePdfComplaint = createAsyncThunk(
   }
 );
 
+export const checkDuplicateComplaints = createAsyncThunk(
+  'complaints/checkDuplicateComplaints',
+  async (data, { rejectWithValue }) => {
+    try {
+      return await complaintApi.checkDuplicates(data);
+    } catch (err) {
+      return rejectWithValue(extractErrorMessage(err));
+    }
+  }
+);
+
 const initialState = {
   complaints: [],
   selectedComplaint: null,
@@ -89,6 +100,9 @@ const initialState = {
   analysisResult: null,
   analysisLoading: false,
   analysisError: null,
+  duplicateCandidates: [],
+  duplicateLoading: false,
+  duplicateError: null,
   pagination: {
     page: 1,
     pageSize: 20,
@@ -118,10 +132,19 @@ const complaintSlice = createSlice({
     },
     clearSelectedComplaint: (state) => {
       state.selectedComplaint = null;
+      state.duplicateCandidates = [];
+      state.duplicateError = null;
     },
     clearAnalysisResult: (state) => {
       state.analysisResult = null;
       state.analysisError = null;
+      state.duplicateCandidates = [];
+      state.duplicateError = null;
+    },
+    clearDuplicates: (state) => {
+      state.duplicateCandidates = [];
+      state.duplicateError = null;
+      state.duplicateLoading = false;
     },
     clearError: (state) => {
       state.error = null;
@@ -312,6 +335,20 @@ const complaintSlice = createSlice({
       .addCase(analyzePdfComplaint.rejected, (state, action) => {
         state.analysisLoading = false;
         state.analysisError = action.payload;
+      })
+      // checkDuplicateComplaints
+      .addCase(checkDuplicateComplaints.pending, (state) => {
+        state.duplicateLoading = true;
+        state.duplicateError = null;
+      })
+      .addCase(checkDuplicateComplaints.fulfilled, (state, action) => {
+        state.duplicateLoading = false;
+        state.duplicateCandidates = action.payload?.duplicates || [];
+      })
+      .addCase(checkDuplicateComplaints.rejected, (state, action) => {
+        state.duplicateLoading = false;
+        state.duplicateError = action.payload;
+        state.duplicateCandidates = [];
       });
   },
 });
@@ -325,6 +362,7 @@ export const {
   clearError,
   patchAnalysisResult,
   seedAnalysisResult,
+  clearDuplicates,
 } = complaintSlice.actions;
 
 export default complaintSlice.reducer;

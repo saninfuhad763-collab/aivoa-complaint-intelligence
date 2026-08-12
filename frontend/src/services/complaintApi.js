@@ -73,6 +73,16 @@ export const complaintApi = {
     });
     return response.data;
   },
+
+  /**
+   * Check for potential duplicate complaints in PostgreSQL.
+   * POST /api/complaints/check-duplicates
+   * @param {Object} data - { product_name, batch_number, customer_name, exclude_id }
+   */
+  checkDuplicates: async (data) => {
+    const response = await apiClient.post('/api/complaints/check-duplicates', data);
+    return response.data;
+  },
 };
 
 export default complaintApi;
